@@ -5,6 +5,7 @@
 #ifndef ASYNCSERVER_SESSION_H
 #define ASYNCSERVER_SESSION_H
 
+#include <queue>
 #include <boost/asio.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/generators.hpp>
@@ -13,6 +14,8 @@
 /// 前向声明，避免循环包含
 /// 不需要 include <Server.h>
 class Server;
+
+class MsgNode;
 
 /// Session 类继承自模板类 std::enable_shared_from_this<>
 class Session : public std::enable_shared_from_this<Session>{
@@ -28,8 +31,9 @@ public:
     }
 
     void start();
+    void Send(const char *msg, const size_t len);
+
     /**
-     *
      * @return boost::asio::ip::tcp::socket 不支持拷贝，返回引用
      */
     boost::asio::ip::tcp::socket& Socket() {return m_socket;}
@@ -38,12 +42,17 @@ private:
     void handle_write(const boost::system::error_code &ec);
 
     boost::asio::ip::tcp::socket m_socket;
-    char m_data[BUF_SIZE] = {'\0'};
-    std::string m_uuid;
+    char m_data[BUF_SIZE] = {'\0'}; // 缓冲区，用来存放从对端发送过来的数据
+    std::string m_uuid; // 当前 session 的唯一标志
 
     /// 不可以使用 shared_ptr，会造成循环引用问题
     /// 在现代 C++ 里，裸指针表达的就是 “非拥有引用” 的关系
     Server* m_server_ptr;
+
+    /// 存放待发送的数据
+    std::queue<std::shared_ptr<MsgNode>> m_MsgNode_que;
+    std::mutex m_send_que_mtx; // 用来维护 m_MsgNode_que 并发访问的互斥量
+    std::atomic<bool> m_pending{false}; //  记录上一个 MsgNode 有没有发送完成
 };
 
 
