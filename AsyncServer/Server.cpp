@@ -32,26 +32,35 @@ Server::Server(boost::asio::io_context& ioc, unsigned short port)
 
 void Server::start_accept()
 {
-    auto new_session = new Session(m_ioc);
+    auto new_session = std::make_shared<Session>(m_ioc, this);
+    /// 将 shared_ptr 进行拷贝，增加了引用计数，维持 Session 的生存
     m_acceptor.async_accept(new_session->Socket(),
         std::bind(&Server::handle_accept, this, std::placeholders::_1, new_session));
 }
 
-void Server::handle_accept(const boost::system::error_code& ec, Session* new_session)
+void Server::handle_accept(const boost::system::error_code& ec, std::shared_ptr<Session> new_session)
 {
     if (ec)
     {
         std::cerr << "Accept Connection Error"
         << " error_code = " << ec.value()
         << " error_message = " << ec.message() << std::endl;
-        delete new_session;
+        clear_session(new_session->m_uuid);
         return;
     }
 
+    /// 将 shared_ptr 拷贝到 map 里，增加了引用计数，维持 Session 的生存
+    m_session_map.insert({new_session->m_uuid, new_session});
+
     std::cout << "New Connection : " << new_session->Socket().remote_endpoint().address().to_string() << std::endl;
 
-    // 处理新连接的 I/O
+    /// 处理新连接的 I/O
     new_session->start();
 
     start_accept();
+}
+
+void Server::clear_session(const std::string &uuid)
+{
+    m_session_map.erase(uuid);
 }
