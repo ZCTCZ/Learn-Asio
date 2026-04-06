@@ -11,6 +11,8 @@
 #include <boost/uuid/generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include "MsgNode.h"
+
 /// 前向声明，避免循环包含
 /// 不需要 include <Server.h>
 class Server;
@@ -20,11 +22,13 @@ class MsgNode;
 /// Session 类继承自模板类 std::enable_shared_from_this<>
 class Session : public std::enable_shared_from_this<Session>{
     friend class Server;
-    static  constexpr size_t BUF_SIZE = 1024;
+    static constexpr size_t BUF_SIZE = 1024; // 用户的读缓冲区最大大小
+    static constexpr int MAX_LENGTH = 1024 * 8; // 单条数据大小不能超过 8k 字节
 public:
     explicit Session(boost::asio::io_context& ioc, Server *server_ptr)
         : m_socket(ioc),// 根据传入的上下文构建 socket
-        m_server_ptr(server_ptr)
+          m_server_ptr(server_ptr),
+          m_recv_head(std::make_shared<MsgNode>(MsgNode::HEAD_LENGTH))
     {
         const auto uuid = boost::uuids::random_generator()();
         m_uuid = boost::uuids::to_string(uuid);
@@ -53,6 +57,10 @@ private:
     std::queue<std::shared_ptr<MsgNode>> m_MsgNode_que;
     std::mutex m_send_que_mtx; // 用来维护 m_MsgNode_que 并发访问的互斥量
     std::atomic<bool> m_pending{false}; //  记录上一个 MsgNode 有没有发送完成
+
+    bool m_head_parsed = false; // 记录当前这条消息的消息头是否已经解析完成
+    std::shared_ptr<MsgNode> m_recv_head; // 存放当前消息的消息头
+    std::shared_ptr<MsgNode> m_recv_body; // 存放接收到的一条消息的消息体
 };
 
 

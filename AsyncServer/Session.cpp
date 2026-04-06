@@ -54,16 +54,68 @@ void Session::handle_read(const boost::system::error_code& ec, size_t transfer_b
         return;
     }
 
-    /// 打印客户端发送过来的数据
-    std::cout << "Read Data From " << m_socket.remote_endpoint().address().to_string() << " : [";
-    std::cout.write(m_data, transfer_bytes);
-    std::cout << "]" << std::endl;
+    int cur_copy_pos = 0; // 当前处理到 m_data 的哪个位置
+    while (transfer_bytes > 0)
+    {
+        if (!m_head_parsed) // 报文头部还没有解析完成
+        {
+            int need_len = MsgNode::HEAD_LENGTH - m_recv_head->m_cur_len; // 构成一个完整的消息首部，需要的字节数
+            int can_copy = std::min(need_len, static_cast<int>(transfer_bytes)); // 当前所能拷贝的最大字节数
 
-    Send(m_data, transfer_bytes); // 调用 Send() 接口将接受到的数据发送给对端
+            memcpy(m_recv_head->m_data + m_recv_head->m_cur_len, m_data + cur_copy_pos, can_copy);
+            m_recv_head->m_cur_len += can_copy;
+            cur_copy_pos += can_copy;
+            transfer_bytes -= can_copy;
 
-    memset(m_data, '\0', Session::BUF_SIZE);
+            if (m_recv_head->m_cur_len == MsgNode::HEAD_LENGTH) // 首部 已收集齐了
+            {
+                int data_len = 0; // 该条数据体的长度
+                memcpy(&data_len, m_recv_head->m_data, MsgNode::HEAD_LENGTH);
+                if (data_len > Session::MAX_LENGTH)
+                {
+                    std::cerr << "Invalid Data Length From " << m_socket.remote_endpoint().address().to_string() << std::endl;
+                    m_server_ptr->clear_session(m_uuid); // 将该连接直接断开
+                    return;
+                }
 
-    ///继续调用 async_read_some，读取对端发送过来的数据
+                /// 生成记录消息体的结点
+                m_recv_body = std::make_shared<MsgNode>(data_len);
+                m_head_parsed = true;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        /// 消息头部已经处理完成
+        int need_len = m_recv_body->m_total_len - m_recv_body->m_cur_len;
+        int can_copy = std::min(need_len, static_cast<int>(transfer_bytes));
+
+        memcpy(m_recv_body->m_data + m_recv_body->m_cur_len, m_data + cur_copy_pos, can_copy);
+        m_recv_body->m_cur_len += can_copy;
+        cur_copy_pos += can_copy;
+        transfer_bytes -= can_copy;
+
+        if (m_recv_body->m_cur_len == m_recv_body->m_total_len) // 消息体收集齐了
+        {
+            m_recv_body->m_data[m_recv_body->m_total_len] = '\0';
+            std::cout << "Receive From " << m_socket.remote_endpoint().address().to_string() << " ["
+                << m_recv_body->m_data << "]" << std::endl;
+
+            Send(m_recv_body->m_data, m_recv_body->m_total_len);
+
+            /// 重置状态，准备接收下一条消息的首部
+            m_head_parsed = false;
+            m_recv_head->Clear();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    // 统一在循环外边调用 async_read_some
     m_socket.async_read_some(boost::asio::buffer(m_data, Session::BUF_SIZE),
         std::bind(&Session::handle_read, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
@@ -88,7 +140,7 @@ void Session::handle_write(const boost::system::error_code& ec)
         if (!m_MsgNode_que.empty())
         {
             const auto node = m_MsgNode_que.front();
-            boost::asio::async_write(m_socket, boost::asio::buffer(node->m_data, node->m_max_len),
+            boost::asio::async_write(m_socket, boost::asio::buffer(node->m_data, node->m_total_len),
                 std::bind(&Session::handle_write, shared_from_this(), std::placeholders::_1));
             return;
         }
