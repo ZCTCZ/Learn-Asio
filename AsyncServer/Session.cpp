@@ -19,6 +19,14 @@ void Session::Send(const char *msg, const size_t len)
 {
     {
         std::lock_guard<std::mutex> lock(m_send_que_mtx);
+
+        /// 当发送队列已满，直接抛弃当前待发送数据
+        if (m_MsgNode_que.size() >= Session::MAX_QUE_LEN)
+        {
+            std::cerr << "Message Queue Is Full!" << std::endl;
+            return;
+        }
+
         m_MsgNode_que.push(std::make_shared<MsgNode>(msg, len));
 
         if (m_pending) //上次还有 MsgNode 未发送完。将这次待发送的 MsgNode 添加到发送队列里即可
@@ -26,7 +34,8 @@ void Session::Send(const char *msg, const size_t len)
             return ;
         }
 
-        boost::asio::async_write(m_socket, boost::asio::buffer(msg, len),
+        auto front_node = m_MsgNode_que.front();
+        boost::asio::async_write(m_socket, boost::asio::buffer(front_node->m_data, front_node->m_total_len),
             std::bind(&Session::handle_write, shared_from_this(), std::placeholders::_1));
         m_pending.store(true);
     }
@@ -114,6 +123,9 @@ void Session::handle_read(const boost::system::error_code& ec, size_t transfer_b
             break;
         }
     }
+
+    /// 休眠 1s ，使得对端发过来的数据在内核缓冲区里粘连
+    // std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // 统一在循环外边调用 async_read_some
     m_socket.async_read_some(boost::asio::buffer(m_data, Session::BUF_SIZE),

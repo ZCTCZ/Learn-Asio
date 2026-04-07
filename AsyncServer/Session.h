@@ -24,6 +24,7 @@ class Session : public std::enable_shared_from_this<Session>{
     friend class Server;
     static constexpr size_t BUF_SIZE = 1024; // 用户的读缓冲区最大大小
     static constexpr int MAX_LENGTH = 1024 * 8; // 单条数据大小不能超过 8k 字节
+    static constexpr int MAX_QUE_LEN = 1000 * 1000; // 消息队列最大长度
 public:
     explicit Session(boost::asio::io_context& ioc, Server *server_ptr)
         : m_socket(ioc),// 根据传入的上下文构建 socket
