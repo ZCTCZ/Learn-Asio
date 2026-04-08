@@ -78,8 +78,11 @@ void Session::handle_read(const boost::system::error_code& ec, size_t transfer_b
 
             if (m_recv_head->m_cur_len == MsgNode::HEAD_LENGTH) // 首部 已收集齐了
             {
-                int data_len = 0; // 该条数据体的长度
+                uint32_t data_len = 0; // 该条数据体的长度
                 memcpy(&data_len, m_recv_head->m_data, MsgNode::HEAD_LENGTH);
+                /// 网络字节序转换成主机字节序
+                data_len = boost::asio::detail::socket_ops::network_to_host_long(data_len);
+
                 if (data_len > Session::MAX_LENGTH)
                 {
                     std::cerr << "Invalid Data Length From " << m_socket.remote_endpoint().address().to_string() << std::endl;
@@ -124,8 +127,8 @@ void Session::handle_read(const boost::system::error_code& ec, size_t transfer_b
         }
     }
 
-    /// 休眠 1s ，使得对端发过来的数据在内核缓冲区里粘连
-    // std::this_thread::sleep_for(std::chrono::seconds(1));
+    // 休眠 1s ，使得对端发过来的数据在内核缓冲区里粘连
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // 统一在循环外边调用 async_read_some
     m_socket.async_read_some(boost::asio::buffer(m_data, Session::BUF_SIZE),

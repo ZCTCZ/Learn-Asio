@@ -6,6 +6,7 @@
 #define ASYNCSERVER_MSGNODE_H
 
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 
 class MsgNode {
@@ -14,8 +15,8 @@ public:
     /// 数据包的头部，用 HEAD_LENGTH 字节的空间，存放数据所占字节数
     static constexpr int HEAD_LENGTH = 4;
 
-    explicit MsgNode(const char *msg, size_t data_len);
-    explicit MsgNode(size_t max_len);
+    explicit MsgNode(const char *msg, uint32_t data_len);
+    explicit MsgNode(uint32_t max_len);
     void Clear();
     ~MsgNode();
 private:
