@@ -12,6 +12,8 @@ add_executable(AsyncServer
 
 target_link_libraries(AsyncServer PRIVATE ws2_32 mswsock)
 
-if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
-endif ()
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(AsyncServer PRIVATE -finput-charset=UTF-8 -fexec-charset=GBK)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    target_compile_options(AsyncServer PRIVATE /source-charset:utf-8 /execution-charset:GBK)
+endif()
