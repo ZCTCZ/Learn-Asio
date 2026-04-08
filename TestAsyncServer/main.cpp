@@ -29,8 +29,9 @@ int main()
                 {
                     /// 先读取 HEAD_LEN 字节的报文首部
                     boost::asio::read(socket, boost::asio::buffer(data_len, HEAD_LEN));
-                    int len = 0;
+                    uint32_t len = 0;
                     memcpy(&len, data_len, HEAD_LEN);
+                    len = boost::asio::detail::socket_ops::network_to_host_long(len);
                     /// 再读取 data_len 长度的报文体
                     boost::asio::read(socket, boost::asio::buffer(buf, len));
 
@@ -43,7 +44,7 @@ int main()
             }
             catch (boost::system::system_error &error)
             {
-                std::cout << "Occurred Error"
+                std::cerr << "Occurred Error"
                 << " error_code = " << error.code()
                 << " error_message = " << error.what() << std::endl;
             }
@@ -58,8 +59,9 @@ int main()
                 for (;;)
                 {
                     std::string data = "Hello World!" + std::to_string(cnt++);
-                    int data_len = data.size();
-                    memcpy(send_data, &data_len, HEAD_LEN);
+                    uint32_t data_len = data.size();
+                    uint32_t tmp = boost::asio::detail::socket_ops::host_to_network_long(data_len);
+                    memcpy(send_data, &tmp, HEAD_LEN);
                     memcpy(send_data + HEAD_LEN, data.c_str(), data_len);
                     boost::asio::write(socket, boost::asio::buffer(send_data, data_len + HEAD_LEN));
 
@@ -69,7 +71,7 @@ int main()
             }
             catch (boost::system::system_error &error)
             {
-                std::cout << "Occurred Error"
+                std::cerr << "Occurred Error"
                 << " error_code = " << error.code()
                 << " error_message = " << error.what() << std::endl;
             }
@@ -80,7 +82,7 @@ int main()
     }
     catch (boost::system::system_error &error)
     {
-        std::cout << "Occurred Error"
+        std::cerr << "Occurred Error"
         << " error_code = " << error.code()
         << " error_message = " << error.what() << std::endl;
     }
