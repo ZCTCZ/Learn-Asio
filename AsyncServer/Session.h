@@ -46,6 +46,12 @@ private:
     void handle_read(const boost::system::error_code &ec, size_t transfer_bytes);
     void handle_write(const boost::system::error_code &ec);
 
+    /// 读取消息首部之后回调该函数
+    void handle_read_head(const boost::system::error_code &ec, size_t transfer_bytes);
+
+    /// 读取消息体之后回调该函数
+    void handle_read_body(const boost::system::error_code &ec, size_t transfer_bytes);
+
     boost::asio::ip::tcp::socket m_socket;
     char m_data[BUF_SIZE] = {'\0'}; // 缓冲区，用来存放从对端发送过来的数据
     std::string m_uuid; // 当前 session 的唯一标志
