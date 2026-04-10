@@ -45,12 +45,12 @@ void Server::handle_accept(const boost::system::error_code& ec, std::shared_ptr<
         std::cerr << "Accept Connection Error"
         << " error_code = " << ec.value()
         << " error_message = " << ec.message() << std::endl;
-        clear_session(new_session->m_uuid);
+        clear_session(new_session->GetUUID());
         return;
     }
 
     /// 将 shared_ptr 拷贝到 map 里，增加了引用计数，维持 Session 的生存
-    m_session_map.insert({new_session->m_uuid, new_session});
+    m_session_map.insert({new_session->GetUUID(), new_session});
 
     std::cout << "New Connection : " << new_session->Socket().remote_endpoint().address().to_string() << std::endl;
 

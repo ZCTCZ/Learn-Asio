@@ -7,30 +7,50 @@
 #include <iostream>
 
 #include "MsgNode.h"
+#include "RecvNode.h"
+#include "SendNode.h"
 
+Session::Session(boost::asio::io_context& ioc, Server* server_ptr)
+: m_socket(ioc),// 根据传入的上下文构建 socket
+  m_server_ptr(server_ptr),
+  m_recv_head(std::make_shared<RecvNode>(HEAD_TOTAL_LEN)) //#RecvNode 的 #m_msg_id 成员使用默认值，无意义。
+{
+    const auto uuid = boost::uuids::random_generator()();
+    m_uuid = boost::uuids::to_string(uuid);
+}
 
 void Session::start()
 {
-    // m_socket.async_read_some(boost::asio::buffer(m_data, Session::BUF_SIZE),
-    //     std::bind(&Session::handle_read, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
-
-    boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_head->m_data, MsgNode::HEAD_LENGTH),
+    boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_head->GetData(), HEAD_TOTAL_LEN),
         std::bind(&Session::handle_read_head, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
 
-void Session::Send(const char *msg, const size_t len)
+/**
+* @return boost::asio::ip::tcp::socket 不支持拷贝，返回引用
+*/
+boost::asio::ip::tcp::socket& Session::Socket()
+{
+    return m_socket;
+}
+
+const std::string& Session::GetUUID() const
+{
+    return m_uuid;
+}
+
+void Session::Send(const char *msg, const MSG_LEN_TYPE len, const MSG_ID_TYPE id)
 {
     {
         std::lock_guard<std::mutex> lock(m_send_que_mtx);
 
         /// 当发送队列已满，直接抛弃当前待发送数据
-        if (m_MsgNode_que.size() >= Session::MAX_QUE_LEN)
+        if (m_MsgNode_que.size() >= MAX_QUE_LEN)
         {
             std::cerr << "Message Queue Is Full!" << std::endl;
             return;
         }
 
-        m_MsgNode_que.push(std::make_shared<MsgNode>(msg, len));
+        m_MsgNode_que.push(std::make_shared<SendNode>(msg, len, id));
 
         if (m_pending) //上次还有 MsgNode 未发送完。将这次待发送的 MsgNode 添加到发送队列里即可
         {
@@ -38,106 +58,11 @@ void Session::Send(const char *msg, const size_t len)
         }
 
         auto front_node = m_MsgNode_que.front();
-        boost::asio::async_write(m_socket, boost::asio::buffer(front_node->m_data, front_node->m_total_len),
+        boost::asio::async_write(m_socket, boost::asio::buffer(front_node->GetData(), front_node->Get_Total_Len()),
             std::bind(&Session::handle_write, shared_from_this(), std::placeholders::_1));
         m_pending.store(true);
     }
 }
-
-/*
-void Session::handle_read(const boost::system::error_code& ec, size_t transfer_bytes)
-{
-    if (ec)
-    {
-        /// EOF是一种持久的状态，会存在于缓冲区里一段时间，可以被多个异步读操作读取到
-        if (ec == boost::asio::error::eof)
-        {
-            std::cerr << m_socket.remote_endpoint().address().to_string() << " disconnected" << std::endl;
-            /// 销毁当前 Session 对象
-            m_server_ptr->clear_session(m_uuid);
-            return;
-        }
-
-        std::cerr << "Occurred Error When Read"
-        << " error_code = " << ec.value()
-        << " error_message = " << ec.message() << std::endl;
-
-        /// 销毁当前 Session 对象
-        m_server_ptr->clear_session(m_uuid);
-        return;
-    }
-
-    int cur_copy_pos = 0; // 当前处理到 m_data 的哪个位置
-    while (transfer_bytes > 0)
-    {
-        if (!m_head_parsed) // 报文头部还没有解析完成
-        {
-            int need_len = MsgNode::HEAD_LENGTH - m_recv_head->m_cur_len; // 构成一个完整的消息首部，需要的字节数
-            int can_copy = std::min(need_len, static_cast<int>(transfer_bytes)); // 当前所能拷贝的最大字节数
-
-            memcpy(m_recv_head->m_data + m_recv_head->m_cur_len, m_data + cur_copy_pos, can_copy);
-            m_recv_head->m_cur_len += can_copy;
-            cur_copy_pos += can_copy;
-            transfer_bytes -= can_copy;
-
-            if (m_recv_head->m_cur_len == MsgNode::HEAD_LENGTH) // 首部 已收集齐了
-            {
-                uint32_t data_len = 0; // 该条数据体的长度
-                memcpy(&data_len, m_recv_head->m_data, MsgNode::HEAD_LENGTH);
-                /// 网络字节序转换成主机字节序
-                data_len = boost::asio::detail::socket_ops::network_to_host_long(data_len);
-
-                if (data_len > Session::MAX_LENGTH)
-                {
-                    std::cerr << "Invalid Data Length From " << m_socket.remote_endpoint().address().to_string() << std::endl;
-                    m_server_ptr->clear_session(m_uuid); // 将该连接直接断开
-                    return;
-                }
-
-                /// 生成记录消息体的结点
-                m_recv_body = std::make_shared<MsgNode>(data_len);
-                m_head_parsed = true;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        /// 消息头部已经处理完成
-        int need_len = m_recv_body->m_total_len - m_recv_body->m_cur_len;
-        int can_copy = std::min(need_len, static_cast<int>(transfer_bytes));
-
-        memcpy(m_recv_body->m_data + m_recv_body->m_cur_len, m_data + cur_copy_pos, can_copy);
-        m_recv_body->m_cur_len += can_copy;
-        cur_copy_pos += can_copy;
-        transfer_bytes -= can_copy;
-
-        if (m_recv_body->m_cur_len == m_recv_body->m_total_len) // 消息体收集齐了
-        {
-            m_recv_body->m_data[m_recv_body->m_total_len] = '\0';
-            std::cout << "Receive From " << m_socket.remote_endpoint().address().to_string() << " ["
-                << m_recv_body->m_data << "]" << std::endl;
-
-            Send(m_recv_body->m_data, m_recv_body->m_total_len);
-
-            /// 重置状态，准备接收下一条消息的首部
-            m_head_parsed = false;
-            m_recv_head->Clear();
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    // 休眠 1s ，使得对端发过来的数据在内核缓冲区里粘连
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    // 统一在循环外边调用 async_read_some
-    m_socket.async_read_some(boost::asio::buffer(m_data, Session::BUF_SIZE),
-        std::bind(&Session::handle_read, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
-}*/
 
 void Session::handle_write(const boost::system::error_code& ec)
 {
@@ -159,7 +84,7 @@ void Session::handle_write(const boost::system::error_code& ec)
         if (!m_MsgNode_que.empty())
         {
             const auto node = m_MsgNode_que.front();
-            boost::asio::async_write(m_socket, boost::asio::buffer(node->m_data, node->m_total_len),
+            boost::asio::async_write(m_socket, boost::asio::buffer(node->GetData(), node->Get_Total_Len()),
                 std::bind(&Session::handle_write, shared_from_this(), std::placeholders::_1));
             return;
         }
@@ -189,27 +114,33 @@ void Session::handle_read_head(const boost::system::error_code &ec, size_t trans
         return;
     }
 
-    /// 读取到的报文首部长度不等于 #MsgNode::HEAD_LENGTH。这种情况理论上来说不可能发生
-    if (transfer_bytes != MsgNode::HEAD_LENGTH)
+    /// 读取到的报文首部长度不等于 #HEAD_TOTAL_LEN。这种情况理论上来说不可能发生
+    if (transfer_bytes != HEAD_TOTAL_LEN)
     {
         std::cerr << "Occurred Unknown Error" << std::endl;
         m_server_ptr->clear_session(m_uuid);
         return;
     }
 
-    uint32_t data_len = 0;
-    memcpy(&data_len, m_recv_head->m_data, MsgNode::HEAD_LENGTH);
-    data_len = boost::asio::detail::socket_ops::network_to_host_long(data_len);
+    /// 解析出消息 id
+    MSG_ID_TYPE msg_id = 0;
+    memcpy(&msg_id, m_recv_head->GetData(), HEAD_ID_LEN);
+    msg_id = boost::asio::detail::socket_ops::network_to_host_short(msg_id);
 
-    if (data_len > Session::MAX_LENGTH)
+    /// 解析出消息长度
+    MSG_LEN_TYPE data_len = 0;
+    memcpy(&data_len, m_recv_head->GetData() + HEAD_ID_LEN, HEAD_DATA_LEN);
+    data_len = boost::asio::detail::socket_ops::network_to_host_short(data_len);
+
+    if (data_len > MAX_LENGTH)
     {
         std::cerr << "Invalid Data Length From " << m_socket.remote_endpoint().address().to_string() << std::endl;
         m_server_ptr->clear_session(m_uuid);
         return;
     }
 
-    m_recv_body = std::make_shared<MsgNode>(data_len);
-    boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_body->m_data, data_len),
+    m_recv_body = std::make_shared<RecvNode>(data_len, msg_id);
+    boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_body->GetData(), data_len),
         std::bind(&Session::handle_read_body, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
 
@@ -228,27 +159,26 @@ void Session::handle_read_body(const boost::system::error_code &ec, size_t trans
         std::cerr << "Occurred Error When Read"
         << " error_code = " << ec.value()
         << " error_message = " << ec.message() << std::endl;
+        return;
     }
 
-    if (transfer_bytes != m_recv_body->m_total_len)
+    if (transfer_bytes != m_recv_body->Get_Total_Len())
     {
         std::cerr << "Occurred UnKnown Error" << std::endl;
         m_server_ptr->clear_session(m_uuid);
         return;
     }
 
-    m_recv_body->m_data[m_recv_body->m_total_len] = '\0';
+    std::cout << "Receive From " << m_socket.remote_endpoint().address().to_string()
+                << "[ID:" << m_recv_body->Get_Msg_Id() << "] " << m_recv_body->GetData()<< std::endl;
 
-    std::cout << "Receive From " << m_socket.remote_endpoint().address().to_string() << " ["
-                << m_recv_body->m_data << "]" << std::endl;
-
-    Send(m_recv_body->m_data, m_recv_body->m_total_len);
+    Send(m_recv_body->GetData(), m_recv_body->Get_Total_Len(), m_recv_body->Get_Msg_Id());
     m_recv_head->Clear();
 
     /// 睡眠 500 毫秒，使得服务器的tcp内核缓冲区的数据形成堆积，以此测试切包效果
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     /// 开始新的消息报头接收
-    boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_head->m_data, MsgNode::HEAD_LENGTH),
+    boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_head->GetData(), HEAD_TOTAL_LEN),
         std::bind(&Session::handle_read_head, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }

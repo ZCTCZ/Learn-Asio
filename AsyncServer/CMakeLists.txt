@@ -8,7 +8,11 @@ add_executable(AsyncServer
                             main.cpp
                             Session.cpp
                             Server.cpp
-                            MsgNode.cpp)
+                            MsgNode.cpp
+        RecvNode.cpp
+        RecvNode.h
+        SendNode.cpp
+        SendNode.h)
 
 target_link_libraries(AsyncServer PRIVATE ws2_32 mswsock)
 
