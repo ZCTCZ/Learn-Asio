@@ -7,10 +7,11 @@
 #include <iostream>
 
 MsgNode::MsgNode(MSG_LEN_TYPE len)
-    :m_data(new char[len + 1]('\0')),
-    m_cur_len(0),
-    m_total_len(len)
-{}
+    : m_data(new char[len + 1]('\0')),
+      m_cur_len(0),
+      m_total_len(len)
+{
+}
 
 char* MsgNode::GetData()
 {
@@ -40,4 +41,5 @@ void MsgNode::Clear()
 
 MsgNode::~MsgNode()
 {
+    delete [] m_data;
 }

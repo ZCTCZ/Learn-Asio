@@ -1,0 +1,44 @@
+[
+{
+  "directory": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -g -std=gnu++20 -fdiagnostics-color=always -finput-charset=UTF-8 -fexec-charset=GBK -fmodules-ts -fmodule-mapper=CMakeFiles\\AsyncServer.dir\\main.cpp.obj.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles\\AsyncServer.dir\\main.cpp.obj -c E:\\Code\\CLion\\LearnAsio\\AsyncServer\\main.cpp",
+  "file": "E:/Code/CLion/LearnAsio/AsyncServer/main.cpp",
+  "output": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug/CMakeFiles/AsyncServer.dir/main.cpp.obj"
+},
+{
+  "directory": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -g -std=gnu++20 -fdiagnostics-color=always -finput-charset=UTF-8 -fexec-charset=GBK -fmodules-ts -fmodule-mapper=CMakeFiles\\AsyncServer.dir\\Session.cpp.obj.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles\\AsyncServer.dir\\Session.cpp.obj -c E:\\Code\\CLion\\LearnAsio\\AsyncServer\\Session.cpp",
+  "file": "E:/Code/CLion/LearnAsio/AsyncServer/Session.cpp",
+  "output": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug/CMakeFiles/AsyncServer.dir/Session.cpp.obj"
+},
+{
+  "directory": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -g -std=gnu++20 -fdiagnostics-color=always -finput-charset=UTF-8 -fexec-charset=GBK -fmodules-ts -fmodule-mapper=CMakeFiles\\AsyncServer.dir\\Server.cpp.obj.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles\\AsyncServer.dir\\Server.cpp.obj -c E:\\Code\\CLion\\LearnAsio\\AsyncServer\\Server.cpp",
+  "file": "E:/Code/CLion/LearnAsio/AsyncServer/Server.cpp",
+  "output": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug/CMakeFiles/AsyncServer.dir/Server.cpp.obj"
+},
+{
+  "directory": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -g -std=gnu++20 -fdiagnostics-color=always -finput-charset=UTF-8 -fexec-charset=GBK -fmodules-ts -fmodule-mapper=CMakeFiles\\AsyncServer.dir\\MsgNode.cpp.obj.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles\\AsyncServer.dir\\MsgNode.cpp.obj -c E:\\Code\\CLion\\LearnAsio\\AsyncServer\\MsgNode.cpp",
+  "file": "E:/Code/CLion/LearnAsio/AsyncServer/MsgNode.cpp",
+  "output": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug/CMakeFiles/AsyncServer.dir/MsgNode.cpp.obj"
+},
+{
+  "directory": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -g -std=gnu++20 -fdiagnostics-color=always -finput-charset=UTF-8 -fexec-charset=GBK -fmodules-ts -fmodule-mapper=CMakeFiles\\AsyncServer.dir\\RecvNode.cpp.obj.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles\\AsyncServer.dir\\RecvNode.cpp.obj -c E:\\Code\\CLion\\LearnAsio\\AsyncServer\\RecvNode.cpp",
+  "file": "E:/Code/CLion/LearnAsio/AsyncServer/RecvNode.cpp",
+  "output": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug/CMakeFiles/AsyncServer.dir/RecvNode.cpp.obj"
+},
+{
+  "directory": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -g -std=gnu++20 -fdiagnostics-color=always -finput-charset=UTF-8 -fexec-charset=GBK -fmodules-ts -fmodule-mapper=CMakeFiles\\AsyncServer.dir\\SendNode.cpp.obj.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles\\AsyncServer.dir\\SendNode.cpp.obj -c E:\\Code\\CLion\\LearnAsio\\AsyncServer\\SendNode.cpp",
+  "file": "E:/Code/CLion/LearnAsio/AsyncServer/SendNode.cpp",
+  "output": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug/CMakeFiles/AsyncServer.dir/SendNode.cpp.obj"
+},
+{
+  "directory": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug",
+  "command": "C:\\msys64\\ucrt64\\bin\\g++.exe -g -std=gnu++20 -fdiagnostics-color=always -finput-charset=UTF-8 -fexec-charset=GBK -fmodules-ts -fmodule-mapper=CMakeFiles\\AsyncServer.dir\\LogicSystem.cpp.obj.modmap -MD -fdeps-format=p1689r5 -x c++ -o CMakeFiles\\AsyncServer.dir\\LogicSystem.cpp.obj -c E:\\Code\\CLion\\LearnAsio\\AsyncServer\\LogicSystem.cpp",
+  "file": "E:/Code/CLion/LearnAsio/AsyncServer/LogicSystem.cpp",
+  "output": "E:/Code/CLion/LearnAsio/AsyncServer/cmake-build-debug/CMakeFiles/AsyncServer.dir/LogicSystem.cpp.obj"
+}
+]

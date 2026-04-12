@@ -1,0 +1,11 @@
+{
+"rules": [
+{
+"primary-output": "CMakeFiles/AsyncServer.dir/Server.cpp.o",
+"requires": [
+]
+}
+],
+"version": 0,
+"revision": 0
+}

@@ -1,0 +1,15 @@
+ninja_dyndep_version = 1.0
+build CMakeFiles/AsyncServer.dir/main.cpp.obj: dyndep
+
+build CMakeFiles/AsyncServer.dir/Session.cpp.obj: dyndep
+
+build CMakeFiles/AsyncServer.dir/Server.cpp.obj: dyndep
+
+build CMakeFiles/AsyncServer.dir/MsgNode.cpp.obj: dyndep
+
+build CMakeFiles/AsyncServer.dir/RecvNode.cpp.obj: dyndep
+
+build CMakeFiles/AsyncServer.dir/SendNode.cpp.obj: dyndep
+
+build CMakeFiles/AsyncServer.dir/LogicSystem.cpp.obj: dyndep
+

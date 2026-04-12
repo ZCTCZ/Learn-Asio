@@ -11,9 +11,9 @@
 #include "SendNode.h"
 
 Session::Session(boost::asio::io_context& ioc, Server* server_ptr)
-: m_socket(ioc),// 根据传入的上下文构建 socket
-  m_server_ptr(server_ptr),
-  m_recv_head(std::make_shared<RecvNode>(HEAD_TOTAL_LEN)) //#RecvNode 的 #m_msg_id 成员使用默认值，无意义。
+    : m_socket(ioc), // 根据传入的上下文构建 socket
+      m_server_ptr(server_ptr),
+      m_recv_head(std::make_shared<RecvNode>(HEAD_TOTAL_LEN)) //#RecvNode 的 #m_msg_id 成员使用默认值，无意义。
 {
     const auto uuid = boost::uuids::random_generator()();
     m_uuid = boost::uuids::to_string(uuid);
@@ -22,7 +22,8 @@ Session::Session(boost::asio::io_context& ioc, Server* server_ptr)
 void Session::start()
 {
     boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_head->GetData(), HEAD_TOTAL_LEN),
-        std::bind(&Session::handle_read_head, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+                            std::bind(&Session::handle_read_head, shared_from_this(), std::placeholders::_1,
+                                      std::placeholders::_2));
 }
 
 /**
@@ -38,7 +39,7 @@ const std::string& Session::GetUUID() const
     return m_uuid;
 }
 
-void Session::Send(const char *msg, const MSG_LEN_TYPE len, const MSG_ID_TYPE id)
+void Session::Send(const char* msg, const MSG_LEN_TYPE len, const MSG_TYPE id)
 {
     {
         std::lock_guard<std::mutex> lock(m_send_que_mtx);
@@ -54,14 +55,19 @@ void Session::Send(const char *msg, const MSG_LEN_TYPE len, const MSG_ID_TYPE id
 
         if (m_pending) //上次还有 MsgNode 未发送完。将这次待发送的 MsgNode 添加到发送队列里即可
         {
-            return ;
+            return;
         }
 
         auto front_node = m_MsgNode_que.front();
         boost::asio::async_write(m_socket, boost::asio::buffer(front_node->GetData(), front_node->Get_Total_Len()),
-            std::bind(&Session::handle_write, shared_from_this(), std::placeholders::_1));
+                                 std::bind(&Session::handle_write, shared_from_this(), std::placeholders::_1));
         m_pending.store(true);
     }
+}
+
+void Session::Send(const std::string& msg, MSG_TYPE id)
+{
+    Send(msg.c_str(), msg.size(), id);
 }
 
 void Session::handle_write(const boost::system::error_code& ec)
@@ -69,8 +75,8 @@ void Session::handle_write(const boost::system::error_code& ec)
     if (ec)
     {
         std::cerr << "Occurred Error When Write"
-        << " error_code = " << ec.value()
-        << " error_message = " << ec.message() << std::endl;
+            << " error_code = " << ec.value()
+            << " error_message = " << ec.message() << std::endl;
 
         /// 销毁当前 Session 对象
         m_server_ptr->clear_session(m_uuid);
@@ -85,7 +91,7 @@ void Session::handle_write(const boost::system::error_code& ec)
         {
             const auto node = m_MsgNode_que.front();
             boost::asio::async_write(m_socket, boost::asio::buffer(node->GetData(), node->Get_Total_Len()),
-                std::bind(&Session::handle_write, shared_from_this(), std::placeholders::_1));
+                                     std::bind(&Session::handle_write, shared_from_this(), std::placeholders::_1));
             return;
         }
 
@@ -94,7 +100,7 @@ void Session::handle_write(const boost::system::error_code& ec)
 }
 
 /// 读取消息首部之后回调该函数
-void Session::handle_read_head(const boost::system::error_code &ec, size_t transfer_bytes)
+void Session::handle_read_head(const boost::system::error_code& ec, size_t transfer_bytes)
 {
     if (ec)
     {
@@ -106,8 +112,8 @@ void Session::handle_read_head(const boost::system::error_code &ec, size_t trans
         }
 
         std::cerr << "Occurred Error When Read"
-        << " error_code = " << ec.value()
-        << " error_message = " << ec.message() << std::endl;
+            << " error_code = " << ec.value()
+            << " error_message = " << ec.message() << std::endl;
 
         /// 销毁当前 Session 对象
         m_server_ptr->clear_session(m_uuid);
@@ -139,13 +145,14 @@ void Session::handle_read_head(const boost::system::error_code &ec, size_t trans
         return;
     }
 
-    m_recv_body = std::make_shared<RecvNode>(data_len, msg_id);
+    m_recv_body = std::make_shared<RecvNode>(data_len, static_cast<MSG_TYPE>(msg_id));
     boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_body->GetData(), data_len),
-        std::bind(&Session::handle_read_body, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+                            std::bind(&Session::handle_read_body, shared_from_this(), std::placeholders::_1,
+                                      std::placeholders::_2));
 }
 
 /// 读取消息体之后回调该函数
-void Session::handle_read_body(const boost::system::error_code &ec, size_t transfer_bytes)
+void Session::handle_read_body(const boost::system::error_code& ec, size_t transfer_bytes)
 {
     if (ec)
     {
@@ -157,8 +164,9 @@ void Session::handle_read_body(const boost::system::error_code &ec, size_t trans
         }
 
         std::cerr << "Occurred Error When Read"
-        << " error_code = " << ec.value()
-        << " error_message = " << ec.message() << std::endl;
+            << " error_code = " << ec.value()
+            << " error_message = " << ec.message() << std::endl;
+        m_server_ptr->clear_session(m_uuid);
         return;
     }
 
@@ -169,10 +177,8 @@ void Session::handle_read_body(const boost::system::error_code &ec, size_t trans
         return;
     }
 
-    std::cout << "Receive From " << m_socket.remote_endpoint().address().to_string()
-                << "[ID:" << m_recv_body->Get_Msg_Id() << "] " << m_recv_body->GetData()<< std::endl;
-
-    Send(m_recv_body->GetData(), m_recv_body->Get_Total_Len(), m_recv_body->Get_Msg_Id());
+    /// 将待处理的消息放入逻辑层的消息队列里
+    LogicSystem::GetInstance()->PostMsgToQue(shared_from_this(), m_recv_body);
     m_recv_head->Clear();
 
     /// 睡眠 500 毫秒，使得服务器的tcp内核缓冲区的数据形成堆积，以此测试切包效果
@@ -180,5 +186,6 @@ void Session::handle_read_body(const boost::system::error_code &ec, size_t trans
 
     /// 开始新的消息报头接收
     boost::asio::async_read(m_socket, boost::asio::buffer(m_recv_head->GetData(), HEAD_TOTAL_LEN),
-        std::bind(&Session::handle_read_head, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
+                            std::bind(&Session::handle_read_head, shared_from_this(), std::placeholders::_1,
+                                      std::placeholders::_2));
 }

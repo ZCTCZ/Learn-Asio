@@ -9,13 +9,13 @@
 class SendNode : public MsgNode
 {
 public:
-    explicit SendNode(const char *msg, MSG_LEN_TYPE len, MSG_ID_TYPE id);
+    explicit SendNode(const char* msg, MSG_LEN_TYPE len, MSG_TYPE id);
     ~SendNode() override;
-    MSG_ID_TYPE Get_Msg_Id() const;
-private:
-    MSG_ID_TYPE m_msg_id;
-};
+    MSG_TYPE Get_Msg_Id() const;
 
+private:
+    MSG_TYPE m_msg_id;
+};
 
 
 #endif //ASYNCSERVER_SENDNODE_H
