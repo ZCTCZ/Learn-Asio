@@ -30,32 +30,22 @@ void LogicSystem::MainLogic()
     for (;;)
     {
         std::unique_lock<std::mutex> lock(m_mtx);
-        m_cond_v.wait(lock, [this]()
-        {
-            return !m_msg_que.empty() || m_stop;
-        });
-
+        m_cond_v.wait(lock);
+        HandleQue();
         if (m_stop)
         {
-            /// 清空队列里待处理的消息
-            while (!m_msg_que.empty())
-            {
-                auto front = m_msg_que.front();
-                m_msg_que.pop();
-
-                if (auto it = m_func_callbacks.find(front.m_id); it != m_func_callbacks.end())
-                {
-                    it->second(front.m_session_ptr, front.m_id, front.m_data);
-                }
-            }
-            lock.unlock();
-            return; // 结束逻辑线程
+            break;
         }
+    }
+}
 
-        /// 只取出队首元素，防止逻辑线程占用 #m_msg_que 时间过程，耽误主线程
-        auto front = m_msg_que.front();
-        m_msg_que.pop();
-        lock.unlock();
+void LogicSystem::HandleQue()
+{
+    while (!m_handle_que.empty())
+    {
+        auto front = m_handle_que.front();
+        m_handle_que.pop();
+
         if (auto it = m_func_callbacks.find(front.m_id); it != m_func_callbacks.end())
         {
             it->second(front.m_session_ptr, front.m_id, front.m_data);
@@ -77,10 +67,21 @@ void LogicSystem::RegisterFuncCallBack()
 
 void LogicSystem::PostMsgToQue(std::shared_ptr<Session> session, std::shared_ptr<RecvNode> recv_node)
 {
-    std::lock_guard<std::mutex> lock(m_mtx);
     m_msg_que.emplace(session, recv_node);
-    if (m_msg_que.size() == 1)
+    auto now = std::chrono::steady_clock::now();
+
+    bool should_swap = m_msg_que.size() == MAX_MSG_QUE_CAPACITY ||
+        (now - m_last_swap_time) > MAX_DELAY_MS;
+
+    if (should_swap)
     {
+        std::lock_guard<std::mutex> lock(m_mtx);
+
+        /// 将备用队列空间和当前消息的空间进行交换
+        /// 同时降低锁的粒度
+        m_msg_que.swap(m_handle_que);
+
+        m_last_swap_time = now;
         m_cond_v.notify_one(); // 逻辑线程可能被挂起，需要唤醒它
     }
 }

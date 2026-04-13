@@ -50,12 +50,16 @@ private:
     void RegisterFuncCallBack(); // 将 #FUNCCALLBACK 类型的函数添加到 #m_func_callbacks 里
     void MainLogic(); // 线程运行的主函数，负责逻辑处理
     void HandleHelloWorld(std::shared_ptr<Session>, MSG_TYPE, const std::string&); // 处理消息id为 #MAG_HELLO_WORLD 的消息
+    void HandleQue();
     std::thread m_thread; // 逻辑线程
-    std::queue<LogicNode> m_msg_que; // 消息队列，存放待处理的消息
+    std::queue<LogicNode> m_msg_que; // 消息队列，用于I/O线程存放待处理的消息
+    std::queue<LogicNode> m_handle_que; // 双缓冲队列的核心，用于和 #m_msg_que 进行交换（给 #m_msg_que 腾出空间）
     std::mutex m_mtx;
     std::condition_variable m_cond_v;
     std::atomic_bool m_stop{false}; // 控制逻辑线程是否应该退出
     std::unordered_map<MSG_TYPE, FUNCCALLBACK> m_func_callbacks; // 记录每种消息类型所对应的处理函数
+
+    std::chrono::steady_clock::time_point m_last_swap_time; // 上次发生队列交换的时间
 };
 
 
