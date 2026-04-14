@@ -8,6 +8,8 @@ add_executable(TestAsyncServer main.cpp)
 
 target_link_libraries(TestAsyncServer PRIVATE ws2_32)
 
-if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
-endif ()
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(TestAsyncServer PUBLIC -finput-charset=UTF-8 -fexec-charset=GBK)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    target_compile_options(TestAsyncServer PUBLIC /source-charset:UTF-8 /execution-charset:GBK)
+endif()
