@@ -80,10 +80,14 @@ void LogicSystem::RegisterFuncCallBack()
 
 void LogicSystem::PostMsgToQue(const std::shared_ptr<Session>& session, const std::shared_ptr<RecvNode>& recv_node)
 {
-    std::lock_guard<std::mutex> lock(m_mtx);
-    m_msg_que.emplace(session, recv_node);
-
-    if (m_msg_que.size() >= MAX_MSG_QUE_CAPACITY)
+    bool should_notify = false;
+    {
+        std::lock_guard<std::mutex> lock(m_mtx);
+        m_msg_que.emplace(session, recv_node);
+        should_notify = m_msg_que.size() >= MAX_MSG_QUE_CAPACITY;
+    }
+ /// 在锁外面 notify,可以减少无用的上下文切换
+    if (should_notify)
     {
         m_cond_v.notify_one();
     }
