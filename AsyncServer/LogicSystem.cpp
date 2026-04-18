@@ -29,9 +29,22 @@ void LogicSystem::MainLogic()
 {
     for (;;)
     {
-        std::unique_lock<std::mutex> lock(m_mtx);
-        m_cond_v.wait(lock);
+        {
+            std::unique_lock<std::mutex> lock(m_mtx);
+            m_cond_v.wait_for(lock, MAX_DELAY_MS, [this]()
+            {
+                return m_msg_que.size() >= MAX_MSG_QUE_CAPACITY || m_stop;
+            });
+
+            if (!m_msg_que.empty())
+            {
+                std::swap(m_msg_que, m_handle_que);
+            }
+        }
+
+        /// 逻辑线程处理数据期间，不需要持有锁
         HandleQue();
+
         if (m_stop)
         {
             break;
@@ -65,24 +78,14 @@ void LogicSystem::RegisterFuncCallBack()
     });
 }
 
-void LogicSystem::PostMsgToQue(std::shared_ptr<Session> session, std::shared_ptr<RecvNode> recv_node)
+void LogicSystem::PostMsgToQue(const std::shared_ptr<Session>& session, const std::shared_ptr<RecvNode>& recv_node)
 {
+    std::lock_guard<std::mutex> lock(m_mtx);
     m_msg_que.emplace(session, recv_node);
-    auto now = std::chrono::steady_clock::now();
 
-    bool should_swap = m_msg_que.size() == MAX_MSG_QUE_CAPACITY ||
-        (now - m_last_swap_time) > MAX_DELAY_MS;
-
-    if (should_swap)
+    if (m_msg_que.size() >= MAX_MSG_QUE_CAPACITY)
     {
-        std::lock_guard<std::mutex> lock(m_mtx);
-
-        /// 将备用队列空间和当前消息的空间进行交换
-        /// 同时降低锁的粒度
-        m_msg_que.swap(m_handle_que);
-
-        m_last_swap_time = now;
-        m_cond_v.notify_one(); // 逻辑线程可能被挂起，需要唤醒它
+        m_cond_v.notify_one();
     }
 }
 

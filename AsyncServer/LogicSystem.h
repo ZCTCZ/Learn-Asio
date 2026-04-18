@@ -21,7 +21,7 @@ class LogicNode
     friend class LogicSystem;
 
 public:
-    LogicNode(std::shared_ptr<Session> session_ptr, std::shared_ptr<RecvNode> RecvNode_Ptr)
+    LogicNode(std::shared_ptr<Session> session_ptr, const std::shared_ptr<RecvNode>& RecvNode_Ptr)
         : m_session_ptr{std::move(session_ptr)},
           m_id(RecvNode_Ptr->Get_Msg_Id()),
           m_data(std::string(RecvNode_Ptr->GetData(), RecvNode_Ptr->Get_Total_Len()))
@@ -43,7 +43,7 @@ public:
     friend Singleton; // 将基类 #Singleton 设置为友元类，因为基类需要调用 #LogicSystem 的构造函数
     ~LogicSystem() override;
     /// 提供给 #Session 类使用的接口，用于就将待处理的消息添加到消息处理队列
-    void PostMsgToQue(std::shared_ptr<Session>, std::shared_ptr<RecvNode>);
+    void PostMsgToQue(const std::shared_ptr<Session>&, const std::shared_ptr<RecvNode>&);
 
 private:
     LogicSystem();
@@ -58,8 +58,6 @@ private:
     std::condition_variable m_cond_v;
     std::atomic_bool m_stop{false}; // 控制逻辑线程是否应该退出
     std::unordered_map<MSG_TYPE, FUNCCALLBACK> m_func_callbacks; // 记录每种消息类型所对应的处理函数
-
-    std::chrono::steady_clock::time_point m_last_swap_time; // 上次发生队列交换的时间
 };
 
 

@@ -42,6 +42,8 @@ const std::string& Session::GetUUID() const
 void Session::Send(const char* msg, const MSG_LEN_TYPE len, const MSG_TYPE id)
 {
     {
+        /// m_send_que可能主 I/O 线程在访问（#handle_write函数里面）
+        /// 当前#Send 函数是 逻辑线程在运行，所有需要加锁
         std::lock_guard<std::mutex> lock(m_send_que_mtx);
 
         /// 当发送队列已满，直接抛弃当前待发送数据
