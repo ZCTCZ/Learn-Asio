@@ -82,12 +82,16 @@ void LogicSystem::RegisterFuncCallBack()
 
 void LogicSystem::PostMsgToQue(std::shared_ptr<Session> session, std::shared_ptr<RecvNode> recv_node)
 {
-    /// 可能有多个线程向 #m_msg_que 添加数据，所以需要加锁
-    std::lock_guard<std::mutex> lock(m_mtx);
-    m_msg_que.emplace(session, recv_node);
-
+    bool should_notify = false;
+    {
+        /// 可能有多个线程向 #m_msg_que 添加数据，所以需要加锁
+        std::lock_guard<std::mutex> lock(m_mtx);
+        m_msg_que.emplace(session, recv_node);
+        should_notify = m_msg_que.size() >= MAX_MSG_QUE_CAPACITY;
+    }
+    
     /// 队列满了就立即唤醒逻辑线程，不用等超时
-    if (m_msg_que.size() >= MAX_MSG_QUE_CAPACITY)
+    if (should_notify)
     {
         m_cond_v.notify_one();
     }
