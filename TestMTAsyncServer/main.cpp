@@ -1,6 +1,6 @@
 #include <iostream>
 #include <boost/asio.hpp>
-
+#include <nlohmann/json.hpp>
 constexpr int THREADNUMS = 100;
 constexpr int TIMES = 500;
 constexpr int MAX_LEN = 1024 * 10; // 发送的数据包的最大长度
@@ -37,10 +37,14 @@ struct process
             for (int i = 0; i < TIMES; ++i)
             {
                 /// 发送数据
+                nlohmann::json send_json;
+                send_json["id"] = id;
+                send_json["msg"] = str + std::to_string(cnt++);
+                auto msg = send_json.dump();
+
                 uint16_t net_id = boost::asio::detail::socket_ops::host_to_network_short(id);
                 memcpy(sendData, &net_id, HEAD_ID_LEN);
 
-                auto msg = str + std::to_string(cnt++);
                 uint16_t net_len = boost::asio::detail::socket_ops::host_to_network_short(msg.size());
                 memcpy(sendData + HEAD_ID_LEN, &net_len, HEAD_DATA_LEN);
 
@@ -59,7 +63,7 @@ struct process
                 host_len = boost::asio::detail::socket_ops::network_to_host_short(host_len);
 
                 boost::asio::read(socket, boost::asio::buffer(readBuffer, host_len));
-                std::cout << '[' << host_id << ']' << readBuffer << std::endl;
+                // std::cout << "MsgId = " << host_id << "Msg = " << readBuffer << std::endl;
                 memset(headBuffer, '\0', HEAD_TOTAL_LEN);
                 memset(readBuffer, '\0', host_len);
 

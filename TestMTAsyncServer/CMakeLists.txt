@@ -13,4 +13,6 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     target_compile_options(TestMTAsyncServer PUBLIC /source-charset:utf-8 /execution-charset:GBK)
 endif ()
 
-target_link_libraries(TestMTAsyncServer PRIVATE ws2_32)
+find_package(nlohmann_json CONFIG REQUIRED)
+
+target_link_libraries(TestMTAsyncServer PRIVATE ws2_32 nlohmann_json::nlohmann_json)
